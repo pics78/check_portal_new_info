@@ -3,6 +3,9 @@ from bs4 import BeautifulSoup
 import datetime
 
 from lineConnector import sendPortalNewInfo
+from dynamodbConnector import (
+    getLastNewsTitle, updateLastNewsTitle
+)
 from portalEnv import (
     userId, passwd, portal, loginPath, inputParamName1, inputParamName2
 )
@@ -30,17 +33,19 @@ def lambda_handler(event, context):
 
     now = datetime.datetime.now().strftime('%Y.%m.%d')
     newInfo = []
+    lastTitle = getLastNewsTitle()
     for info in infoList:
         updateDate = info.select_one('span:nth-child(1) > span[class="spacing"]').text
-        if now == updateDate:
-            newInfo.append(info.find('a').text)
+        title = info.find('a').text
+        if now == updateDate and lastTitle != title:
+            newInfo.append(title)
         else:
             break
 
-    infoLen = len(newInfo)
-    if infoLen > 0:
+    if len(newInfo) > 0:
+        updateLastNewsTitle(newInfo[0])
         sendPortalNewInfo(newInfo)
-    
+
     return {
         'statusCode': 200
     }
