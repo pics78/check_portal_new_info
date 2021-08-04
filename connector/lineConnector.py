@@ -1,16 +1,17 @@
-import os
 from linebot import LineBotApi
+from linebot.exceptions import LineBotApiError
 from linebot.models import TextSendMessage
-from portalEnv import portal, loginPath
+from env.envMgr import getEnv
+from env.envKeyDef import Portal, Line
 
-# LINE bot info
-channelAccessToken = os.environ['LINE_CHANNEL_ACCESS_TOKEN']
-lineUserId         = os.environ['LINE_USER_ID']
+loginUrl = loginUrl = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
+# LINE info
+channelAccessToken = getEnv(Line.TOKEN)
+lineUserId         = getEnv(Line.USR)
 
 def sendPortalNewInfo(info):
     try:
         formatedInfo = '・' + '\n・'.join(info)
-        loginUrl = portal + loginPath
         text = f'【ポータル新着お知らせ】\n{formatedInfo}\n\nログインはこちら\n{loginUrl}'
         LineBotApi(channelAccessToken).push_message(lineUserId, TextSendMessage(text=text))
     except LineBotApiError as e:
