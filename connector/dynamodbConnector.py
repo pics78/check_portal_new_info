@@ -1,4 +1,3 @@
-import os
 import boto3
 
 from env.envMgr import getEnv, setAwsRegion
