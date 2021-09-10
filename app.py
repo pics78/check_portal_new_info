@@ -34,7 +34,9 @@ def lambda_handler(event, context):
 
     resForHome = ses.request('POST', loginUrl, data=payload)
     soupForHome = BeautifulSoup(resForHome.text, 'html.parser')
-    infoList = soupForHome.select('#innercontent > div:nth-child(4) > div.groupcontent > ul > li')
+    groupList = soupForHome.select('#innercontent > div[class="group"]')
+    # 4番目のgroupクラスdiv要素がお知らせボックス
+    infoList = groupList[3].select('.groupcontent > ul > li')
 
     now = datetime.datetime.now().strftime('%Y.%m.%d')
     newInfo = []
