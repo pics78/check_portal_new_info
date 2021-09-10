@@ -4,7 +4,7 @@ from linebot.models import TextSendMessage
 from env.envMgr import getEnv
 from env.envKeyDef import Portal, Line
 
-loginUrl = loginUrl = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
+loginUrl = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
 # LINE info
 channelAccessToken = getEnv(Line.TOKEN)
 lineUserId         = getEnv(Line.USR)
