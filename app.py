@@ -42,13 +42,16 @@ def lambda_handler(event, context):
     newInfo = []
     lastTitle = dynamodbConnector.getLastNewsTitle()
     for info in infoList:
-        updateDate = info.select_one('span:nth-child(1) > span[class="spacing"]').text
-        title = info.find('a').text
-        if now == updateDate and lastTitle != title:
-            newInfo.append(title)
-        else:
-            break
-
+        # 締切間近の表示は日付に関わらず先頭にくるため飛ばす
+        isNearDeadline = info.select_one('span:nth-child(3) > span[style="color: Red"]') != None
+        if not isNearDeadline:
+            updateDate = info.select_one('span:nth-child(1) > span[class="spacing"]').text
+            title = info.find('a').text
+            if now == updateDate and lastTitle != title:
+                newInfo.append(title)
+            else:
+                break
+    
     if len(newInfo) > 0:
         if isTest:
             # テスト実行時はLINE送信とDB更新を行わずコンソール出力する
