@@ -46,9 +46,9 @@ def lambda_handler(event, context):
         isNearDeadline = info.select_one('span:nth-child(3) > span[style="color: Red"]') != None
         if not isNearDeadline:
             updateDate = info.select_one('span:nth-child(1) > span[class="spacing"]').text
-            title = info.find('a').text
-            if now == updateDate and lastTitle != title:
-                newInfo.append(title)
+            anchor = info.find('a')
+            if now == updateDate and lastTitle != anchor.text:
+                newInfo.append(anchor)
             else:
                 break
     
@@ -58,8 +58,40 @@ def lambda_handler(event, context):
             print('TEST: LastNewsTitle = ', newInfo[0])
             print('TEST: newInfo: ', newInfo)
         else:
-            awsConnector.updateLastNewsTitle(newInfo[0])
-            lineConnector.sendPortalNewInfo(newInfo)
+            infoCount = 1
+            for info in newInfo:
+                resForInfoDetail = ses.request('GET', getEnv(Portal.URL) + info.get('href'))
+                soupForInfoDetail = BeautifulSoup(resForInfoDetail.text, 'html.parser')
+                infoDetails = soupForInfoDetail.select('#innercontent > div[class="centerblock1"] > div[class="centerblock1content"] > table > tr')
+                infoContentList = []
+                fileList = []
+                fileCount = 1
+                for elem in infoDetails:
+                    title = elem.select_one('td:nth-child(1)')
+                    val = elem.select_one('td:nth-child(2)')
+                    if val.text.strip('\n') != '':
+                        fileName = val.text.strip('\n')
+                        infoContentList.append(f'<{title.text}>')
+                        infoContentList.append(fileName + '\n')
+                        valChildAnchor = val.select_one('a[class="jsDownload"]')
+                        if valChildAnchor != None:
+                            hrefUrl = getEnv(Portal.URL) + valChildAnchor.get('href')
+                            urlData = ses.request('GET', hrefUrl).content
+                            uploadFileName = f'{updateDate}_{infoCount}_{fileCount}.pdf'
+                            with open(uploadFileName ,mode='wb') as f:
+                                f.write(urlData)
+                            awsConnector.uploadFileToS3(uploadFileName)
+                            fileUri = awsConnector.getFileUrl(uploadFileName)
+                            fileList.append({
+                                'fileName': fileName,
+                                'uri': fileUri
+                            })
+                            fileCount += 1
+                lineConnector.sendPortalNewInfo('\n'.join(infoContentList))
+                lineConnector.sendCarousel(
+                    list(map(lambda i: lineConnector.getCarouselColumn(i['fileName'], i['uri']), fileList)))
+                infoCount += 1
+            awsConnector.updateLastNewsTitle(newInfo[0].text)
     else:
         print('newInfo was none.')
 
