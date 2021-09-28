@@ -23,8 +23,8 @@ class AwsIam(Enum):
 class AwsAcc(Enum):
     DDB_TABLE_NAME = 'DYNAMODB_TABLE_NAME'
     DDB_PARTI_KEY = 'DYNAMODB_PARTITION_KEY'
-    S3_BUCKET_NAME = 'portal-info-files'
-    S3_EXPIRESIN = 604800
+    S3_BUCKET_NAME = 'S3_BUCKET_NAME'
+    S3_EXPIRESIN = 'S3_EXPIRESIN'
 
 # テスト実行用
 class StatusForRunning(Enum):
