@@ -19,10 +19,12 @@ class AwsIam(Enum):
     ACCESS_KEY_ID = 'ACCESS_KEY_ID'
     SECRET_ACCESS_KEY = 'SECRET_ACCESS_KEY'
 
-# DynamoDB接続関連
-class Dynamodb(Enum):
-    TABLE = 'DYNAMODB_TABLE_NAME'
-    PARTI = 'DYNAMODB_PARTITION_KEY'
+# AWS接続関連
+class AwsAcc(Enum):
+    DDB_TABLE_NAME = 'DYNAMODB_TABLE_NAME'
+    DDB_PARTI_KEY = 'DYNAMODB_PARTITION_KEY'
+    S3_BUCKET_NAME = 'portal-info-files'
+    S3_EXPIRESIN = 604800
 
 # テスト実行用
 class StatusForRunning(Enum):

@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import datetime
 
-from connector import lineConnector, dynamodbConnector
+from connector import lineConnector, awsConnector
 from env.envMgr import getEnv
 from env.envKeyDef import Portal, StatusForRunning
 
@@ -40,7 +40,7 @@ def lambda_handler(event, context):
 
     now = datetime.datetime.now().strftime('%Y.%m.%d')
     newInfo = []
-    lastTitle = dynamodbConnector.getLastNewsTitle()
+    lastTitle = awsConnector.getLastNewsTitle()
     for info in infoList:
         # 締切間近の表示は日付に関わらず先頭にくるため飛ばす
         isNearDeadline = info.select_one('span:nth-child(3) > span[style="color: Red"]') != None
@@ -58,7 +58,7 @@ def lambda_handler(event, context):
             print('TEST: LastNewsTitle = ', newInfo[0])
             print('TEST: newInfo: ', newInfo)
         else:
-            dynamodbConnector.updateLastNewsTitle(newInfo[0])
+            awsConnector.updateLastNewsTitle(newInfo[0])
             lineConnector.sendPortalNewInfo(newInfo)
     else:
         print('newInfo was none.')
