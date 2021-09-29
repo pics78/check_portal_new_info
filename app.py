@@ -7,31 +7,31 @@ from env.envMgr import getEnv
 from env.envKeyDef import Portal, StatusForRunning
 from utils.parseUtil import ParseUtil
 
-loginUrl        = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
-userId          = getEnv(Portal.USR)
-passwd          = getEnv(Portal.PW)
-inputParamName1 = getEnv(Portal.PARAMNAME1)
-inputParamName2 = getEnv(Portal.PARAMNAME2)
-
 # テスト実行用
 isTest = True if getEnv(StatusForRunning.MODE) == StatusForRunning.IS_TEST.value else False
 
 def lambda_handler(event, context):
     parseUtil = ParseUtil(requests.session(), getEnv(Portal.URL))
 
-    loginSoup = parseUtil.getSoup('GET', getEnv(Portal.LOGINPATH))
+    loginPath = getEnv(Portal.LOGINPATH)
+    userId    = getEnv(Portal.USR)
+    passwd    = getEnv(Portal.PW)
+    prmName1  = getEnv(Portal.PARAMNAME1)
+    prmName2  = getEnv(Portal.PARAMNAME2)
+
+    loginSoup = parseUtil.getSoup('GET', loginPath)
     param1 = loginSoup.findInSoup('input', attrs={'name': getEnv(Portal.PARAMNAME1)}).get('value')
     param2 = loginSoup.findInSoup('input', attrs={'name': getEnv(Portal.PARAMNAME2)}).get('value')
     payload = {
-        '__pjax': 'true',
-        'UserID': userId,
+        '__pjax'  : 'true',
+        'UserID'  : userId,
         'Password': passwd,
         'BirthDay': '1111/11/11',
-        inputParamName1: param1,
-        inputParamName2: param2
+        prmName1  : param1,
+        prmName2  : param2
     }
 
-    groupList = parseUtil.getSoup('POST', getEnv(Portal.LOGINPATH), data=payload).selectInSoup(
+    groupList = parseUtil.getSoup('POST', loginPath, data=payload).selectInSoup(
         '#innercontent > div[class="group"]')
     # 4番目のgroupクラスdiv要素がお知らせボックス
     infoList = groupList[3].select('.groupcontent > ul > li')
