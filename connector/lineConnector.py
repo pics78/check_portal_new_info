@@ -1,21 +1,38 @@
 from linebot import LineBotApi
 from linebot.exceptions import LineBotApiError
-from linebot.models import TextSendMessage
+from linebot.models import (TextSendMessage, TemplateSendMessage,
+    CarouselTemplate, CarouselColumn, URIAction)
 from env.envMgr import getEnv
-from env.envKeyDef import Portal, Line
+from env.envKeyDef import Line
 
-loginUrl = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
 # LINE info
 channelAccessToken = getEnv(Line.TOKEN)
 lineUserId         = getEnv(Line.USR)
 
-def sendPortalNewInfo(info):
+def send(message):
     try:
-        formatedInfo = '・' + '\n・'.join(info)
-        text = f'【ポータル新着お知らせ】\n{formatedInfo}\n\nログインはこちら\n{loginUrl}'
-        LineBotApi(channelAccessToken).push_message(lineUserId, TextSendMessage(text=text))
+        LineBotApi(channelAccessToken).push_message(lineUserId, message)
     except LineBotApiError as e:
         print("ERROR: Sending message to LINE failed.")
         print(e)
-        return 1
-    return 0
+
+def sendPortalNewInfo(contents):
+    text = f'【ポータル新着お知らせ】\n\n{contents}'
+    send(TextSendMessage(text=text))
+
+def sendCarousel(columns):
+    send(TemplateSendMessage(
+        alt_text='Carousel',
+        template=CarouselTemplate(columns=columns)))
+
+def getCarouselColumn(fileName, uri):
+    return CarouselColumn(
+        title =  '添付ファイル',
+        text = fileName,
+        actions = [
+            URIAction(
+                label = 'ダウンロード',
+                uri = uri
+            )
+        ]
+    )

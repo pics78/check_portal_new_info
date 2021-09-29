@@ -2,53 +2,51 @@ import requests
 from bs4 import BeautifulSoup
 import datetime
 
-from connector import lineConnector, dynamodbConnector
+from connector import lineConnector, awsConnector
 from env.envMgr import getEnv
 from env.envKeyDef import Portal, StatusForRunning
-
-loginUrl        = getEnv(Portal.URL) + getEnv(Portal.LOGINPATH)
-userId          = getEnv(Portal.USR)
-passwd          = getEnv(Portal.PW)
-inputParamName1 = getEnv(Portal.PARAMNAME1)
-inputParamName2 = getEnv(Portal.PARAMNAME2)
+from utils.parseUtil import ParseUtil
 
 # テスト実行用
 isTest = True if getEnv(StatusForRunning.MODE) == StatusForRunning.IS_TEST.value else False
 
 def lambda_handler(event, context):
-    ses = requests.session()
+    parseUtil = ParseUtil(requests.session(), getEnv(Portal.URL))
 
-    resForLogin = ses.request('GET', loginUrl)
-    soupForLogin = BeautifulSoup(resForLogin.text, 'html.parser')
-    inputParam1 = soupForLogin.find('input', attrs={'name': inputParamName1}).get('value')
-    inputParam2 = soupForLogin.find('input', attrs={'name': inputParamName2}).get('value')
+    loginPath = getEnv(Portal.LOGINPATH)
+    userId    = getEnv(Portal.USR)
+    passwd    = getEnv(Portal.PW)
+    prmName1  = getEnv(Portal.PARAMNAME1)
+    prmName2  = getEnv(Portal.PARAMNAME2)
 
+    loginSoup = parseUtil.getSoup('GET', loginPath)
+    param1 = loginSoup.findInSoup('input', attrs={'name': getEnv(Portal.PARAMNAME1)}).get('value')
+    param2 = loginSoup.findInSoup('input', attrs={'name': getEnv(Portal.PARAMNAME2)}).get('value')
     payload = {
-        '__pjax': 'true',
-        'UserID': userId,
+        '__pjax'  : 'true',
+        'UserID'  : userId,
         'Password': passwd,
         'BirthDay': '1111/11/11',
-        inputParamName1: inputParam1,
-        inputParamName2: inputParam2
+        prmName1  : param1,
+        prmName2  : param2
     }
 
-    resForHome = ses.request('POST', loginUrl, data=payload)
-    soupForHome = BeautifulSoup(resForHome.text, 'html.parser')
-    groupList = soupForHome.select('#innercontent > div[class="group"]')
+    groupList = parseUtil.getSoup('POST', loginPath, data=payload).selectInSoup(
+        '#innercontent > div[class="group"]')
     # 4番目のgroupクラスdiv要素がお知らせボックス
     infoList = groupList[3].select('.groupcontent > ul > li')
 
     now = datetime.datetime.now().strftime('%Y.%m.%d')
     newInfo = []
-    lastTitle = dynamodbConnector.getLastNewsTitle()
+    lastTitle = awsConnector.getLastNewsTitle()
     for info in infoList:
         # 締切間近の表示は日付に関わらず先頭にくるため飛ばす
         isNearDeadline = info.select_one('span:nth-child(3) > span[style="color: Red"]') != None
         if not isNearDeadline:
             updateDate = info.select_one('span:nth-child(1) > span[class="spacing"]').text
-            title = info.find('a').text
-            if now == updateDate and lastTitle != title:
-                newInfo.append(title)
+            anchor = info.find('a')
+            if now == updateDate and lastTitle != anchor.text:
+                newInfo.append(anchor)
             else:
                 break
     
@@ -58,8 +56,34 @@ def lambda_handler(event, context):
             print('TEST: LastNewsTitle = ', newInfo[0])
             print('TEST: newInfo: ', newInfo)
         else:
-            dynamodbConnector.updateLastNewsTitle(newInfo[0])
-            lineConnector.sendPortalNewInfo(newInfo)
+            infoCount = 1
+            for info in newInfo:
+                infoDetails = parseUtil.getSoup('GET', info.get('href')).selectInSoup(
+                    '#innercontent > div[class="centerblock1"] > div[class="centerblock1content"] > table > tr')
+                infoContentList = []
+                fileList = []
+                fileCount = 1
+                for elem in infoDetails:
+                    title = elem.select_one('td:nth-child(1)')
+                    val = elem.select_one('td:nth-child(2)')
+                    valText = val.text.strip('\n')
+                    if valText != '':
+                        infoContentList.append(f'<{title.text}>')
+                        infoContentList.append(valText + '\n')
+                        valChildAnchor = val.select_one('a[class="jsDownload"]')
+                        if valChildAnchor != None:
+                            uploadFileName = f'{updateDate}_{infoCount}_{fileCount}.pdf'
+                            if parseUtil.wget(valChildAnchor.get('href'), uploadFileName):
+                                awsConnector.uploadFileToS3(uploadFileName)
+                                fileList.append([
+                                    valText, awsConnector.getFileUrl(uploadFileName)
+                                ])
+                            fileCount += 1
+                lineConnector.sendPortalNewInfo('\n'.join(infoContentList))
+                lineConnector.sendCarousel(
+                    list(map(lambda i: lineConnector.getCarouselColumn(i[0], i[1]), fileList)))
+                infoCount += 1
+            awsConnector.updateLastNewsTitle(newInfo[0].text)
     else:
         print('newInfo was none.')
 
