@@ -26,6 +26,10 @@ class AwsAcc(Enum):
     S3_BUCKET_NAME = 'S3_BUCKET_NAME'
     S3_EXPIRESIN = 'S3_EXPIRESIN'
 
+# Lambda関連
+class Lambda(Enum):
+    TMP_DIR = 'TEMP_DIRECTORY_PATH'
+
 # テスト実行用
 class StatusForRunning(Enum):
     MODE = 'RUNNING_MODE'

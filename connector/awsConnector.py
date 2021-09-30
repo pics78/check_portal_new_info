@@ -1,7 +1,7 @@
 import boto3
 
 from env.envMgr import getEnv, setAwsRegion
-from env.envKeyDef import AwsIam, AwsAcc
+from env.envKeyDef import AwsIam, AwsAcc, Lambda
 
 awsAccessKeyId     = getEnv(AwsIam.ACCESS_KEY_ID)
 awsSecretAccessKey = getEnv(AwsIam.SECRET_ACCESS_KEY)
@@ -11,6 +11,8 @@ partition = { getEnv(AwsAcc.DDB_PARTI_KEY): '0' }
 
 bucketName = getEnv(AwsAcc.S3_BUCKET_NAME)
 expiresIn = getEnv(AwsAcc.S3_EXPIRESIN)
+
+tmpDir = getEnv(Lambda.TMP_DIR)
 
 setAwsRegion()
 
@@ -44,7 +46,7 @@ def updateLastNewsTitle(title):
     )
 
 def uploadFileToS3(fileName):
-    s3Resrc.Bucket(bucketName).upload_file(fileName, fileName)
+    s3Resrc.Bucket(bucketName).upload_file(tmpDir + fileName, fileName)
 
 def getFileUrl(fileName):
     return s3client.generate_presigned_url(

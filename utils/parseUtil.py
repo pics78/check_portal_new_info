@@ -1,5 +1,10 @@
 from bs4 import BeautifulSoup
 
+from env.envMgr import getEnv
+from env.envKeyDef import Lambda
+
+tmpDir = getEnv(Lambda.TMP_DIR)
+
 class ParseUtil:
     def __init__(self, session, domain, soup=None):
         self.session = session
@@ -14,7 +19,7 @@ class ParseUtil:
     def wget(self, path, file):
         data = self.session.request('GET', self.domain + path).content
         try:
-            with open(file ,mode='wb') as f:
+            with open(tmpDir + file ,mode='wb') as f:
                 f.write(data)
             return True
         except:
