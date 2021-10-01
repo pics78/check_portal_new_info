@@ -7,11 +7,11 @@ from env.envKeyDef import Line
 
 # LINE info
 channelAccessToken = getEnv(Line.TOKEN)
-lineUserId         = getEnv(Line.USR)
+# lineUserId = getEnv(Line.USR)
 
-def send(message):
+def send(messages):
     try:
-        LineBotApi(channelAccessToken).push_message(lineUserId, message)
+        LineBotApi(channelAccessToken).broadcast(messages=messages)
     except LineBotApiError as e:
         print("ERROR: Sending message to LINE failed.")
         print(e)
