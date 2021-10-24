@@ -7,6 +7,7 @@ from env.envMgr import getEnv
 from env.envKeyDef import Portal, StatusForRunning
 from utils.parseUtil import ParseUtil
 from utils.msgUtil import LineMsgBuilder
+from utils.resultUtil import Result
 
 # テスト実行用
 isTest = True if getEnv(StatusForRunning.MODE) == StatusForRunning.IS_TEST.value else False
@@ -31,11 +32,21 @@ def lambda_handler(event, context):
         prmName1  : param1,
         prmName2  : param2
     }
+    # ログイン処理
+    parseUtil.getSoup('POST', loginPath, data=payload)
+    if parseUtil.soup == None:
+        lineConnector.sendToAdmin('ERROR: Login failed.')
+        return Result.InternalError
 
-    groupList = parseUtil.getSoup('POST', loginPath, data=payload).selectInSoup(
-        '#innercontent > div[class="group"]')
-    # 4番目のgroupクラスdiv要素がお知らせボックス
-    infoList = groupList[3].select('.groupcontent > ul > li')
+    groupList = parseUtil.selectInSoup('#innercontent > div[class="group"]')
+    # 3番目のgroupクラスdiv要素がお知らせボックスだと想定
+    infoGroup = groupList[2]
+    groupHeader = infoGroup.select_one('.groupheader3')
+    if groupHeader == None or groupHeader.text.strip() != getEnv(Portal.TARGET_GROUP_TITLE):
+        lineConnector.sendToAdmin('ERROR: HTML structure is different from expected.')
+        return Result.InternalError
+
+    infoList = infoGroup.select('.groupcontent > ul > li')
 
     now = datetime.datetime.now().strftime('%Y.%m.%d')
     newInfo = []
@@ -70,23 +81,26 @@ def lambda_handler(event, context):
                     valText = val.text.strip('\n')
                     if valText != '':
                         msgBuilder.append(
-                            title=title.text, content=valText)
+                            title   = title.text,
+                            content = valText,
+                        )
+                        # 添付ファイルの確認
                         valChildAnchor = val.select_one('a[class="jsDownload"]')
                         if valChildAnchor != None:
                             uploadFileName = f'{updateDate}_{infoCount}_{fileCount}.pdf'
                             if parseUtil.wget(valChildAnchor.get('href'), uploadFileName):
                                 awsConnector.uploadFileToS3(uploadFileName)
                                 columnBuilder.append(
-                                    name=valText,
-                                    uri=awsConnector.getFileUrl(uploadFileName))
+                                    name = valText,
+                                    uri  = awsConnector.getFileUrl(uploadFileName),
+                                )
                             fileCount += 1
                 lineConnector.sendPortalNewInfo(msgBuilder.toString())
-                lineConnector.sendCarousel(columnBuilder.toList())
+                if not columnBuilder.isEmpty():
+                    lineConnector.sendCarousel(columnBuilder.toList())
                 infoCount += 1
             awsConnector.updateLastNewsTitle(newInfo[0].text)
     else:
         print('newInfo was none.')
 
-    return {
-        'statusCode': 200
-    }
+    return Result.OK

@@ -8,11 +8,12 @@ class Portal(Enum):
     LOGINPATH = 'LOGIN_PATH'
     PARAMNAME1 = 'INPUT_PARAM_1'
     PARAMNAME2 = 'INPUT_PARAM_2'
+    TARGET_GROUP_TITLE = 'TARGET_GROUP_TITLE'
 
 # LINE通知関連
 class Line(Enum):
     TOKEN = 'LINE_CHANNEL_ACCESS_TOKEN'
-    USR = 'LINE_USER_ID'
+    ADMIN = 'LINE_ADMIN_ID'
 
 # AWS認証関連
 class AwsIam(Enum):

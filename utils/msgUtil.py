@@ -21,6 +21,12 @@ class LineMsgBuilder:
             if name != None and uri != None:
                 self.msgBuffer.append(getCarouselColumn(name, uri))
         return self
+    
+    def getLen(self):
+        return len(self.msgBuffer)
+    
+    def isEmpty(self):
+        return True if self.getLen() == 0 else False
 
     def toString(self):
         if self.type == self.TEXT:

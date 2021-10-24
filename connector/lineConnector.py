@@ -1,19 +1,30 @@
 from linebot import LineBotApi
 from linebot.exceptions import LineBotApiError
-from linebot.models import (TextSendMessage, TemplateSendMessage,
-    CarouselTemplate, CarouselColumn, URIAction)
+from linebot.models import (TextSendMessage, TemplateSendMessage, FlexSendMessage,
+    CarouselTemplate, CarouselContainer, CarouselColumn, URIAction)
 from env.envMgr import getEnv
 from env.envKeyDef import Line
 
 # LINE info
 channelAccessToken = getEnv(Line.TOKEN)
-# lineUserId = getEnv(Line.USR)
+lineAdminId = getEnv(Line.ADMIN)
+
+def sendToAdmin(text):
+    try:
+        LineBotApi(channelAccessToken).push_message(
+            to=lineAdminId,
+            messages=TextSendMessage(text=text))
+    except LineBotApiError as e:
+        print('ERROR: Sending message to admin failed.')
+        print(e)
 
 def send(messages):
     try:
         LineBotApi(channelAccessToken).broadcast(messages=messages)
     except LineBotApiError as e:
-        print("ERROR: Sending message to LINE failed.")
+        errMsg = 'ERROR: Sending message to LINE failed.'
+        sendToAdmin(errMsg)
+        print(errMsg)
         print(e)
 
 def sendPortalNewInfo(contents):
