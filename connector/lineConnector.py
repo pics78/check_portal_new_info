@@ -33,7 +33,7 @@ def sendPortalNewInfo(contents):
 
 def sendCarousel(columns):
     send(TemplateSendMessage(
-        alt_text='Carousel',
+        alt_text='添付ファイル一覧',
         template=CarouselTemplate(columns=columns)))
 
 def getCarouselColumn(fileName, uri):
@@ -42,7 +42,7 @@ def getCarouselColumn(fileName, uri):
         text = fileName,
         actions = [
             URIAction(
-                label = 'ダウンロード',
+                label = 'ダウンロード\n(期限1週間)',
                 uri = uri
             )
         ]
