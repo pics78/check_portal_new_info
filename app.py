@@ -3,11 +3,8 @@ from bs4 import BeautifulSoup
 import datetime
 
 from connector import lineConnector, awsConnector
-from env.envMgr import getEnv
-from env.envKeyDef import Portal, StatusForRunning
-from utils.parseUtil import ParseUtil
-from utils.msgUtil import LineMsgBuilder
-from utils.resultUtil import Result
+from env import getEnv, Portal, StatusForRunning
+from utils import ParseUtil, LineMsgBuilder, Result
 
 # テスト実行用
 isTest = True if getEnv(StatusForRunning.MODE) == StatusForRunning.IS_TEST.value else False
@@ -68,13 +65,11 @@ def lambda_handler(event, context):
             print('TEST: LastNewsTitle = ', newInfo[0])
             print('TEST: newInfo: ', newInfo)
         else:
-            infoCount = 1
             for info in newInfo:
                 infoDetails = parseUtil.getSoup('GET', info.get('href')).selectInSoup(
                     '#innercontent > div[class="centerblock1"] > div[class="centerblock1content"] > table > tr')
                 msgBuilder = LineMsgBuilder()
                 columnBuilder = LineMsgBuilder(type=LineMsgBuilder.COLUMN)
-                fileCount = 1
                 for elem in infoDetails:
                     title = elem.select_one('td:nth-child(1)')
                     val = elem.select_one('td:nth-child(2)')
@@ -87,18 +82,15 @@ def lambda_handler(event, context):
                         # 添付ファイルの確認
                         valChildAnchor = val.select_one('a[class="jsDownload"]')
                         if valChildAnchor != None:
-                            uploadFileName = f'{updateDate}_{infoCount}_{fileCount}.pdf'
-                            if parseUtil.wget(valChildAnchor.get('href'), uploadFileName):
-                                awsConnector.uploadFileToS3(uploadFileName)
+                            if parseUtil.wget(valChildAnchor.get('href'), valText):
+                                awsConnector.uploadFileToS3(valText)
                                 columnBuilder.append(
                                     name = valText,
-                                    uri  = awsConnector.getFileUrl(uploadFileName),
+                                    uri  = awsConnector.getFileUrl(valText),
                                 )
-                            fileCount += 1
                 lineConnector.sendPortalNewInfo(msgBuilder.toString())
                 if not columnBuilder.isEmpty():
                     lineConnector.sendCarousel(columnBuilder.toList())
-                infoCount += 1
             awsConnector.updateLastNewsTitle(newInfo[0].text)
     else:
         print('newInfo was none.')
